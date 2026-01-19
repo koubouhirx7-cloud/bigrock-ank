@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getSubmissions, deleteSubmission } from '@/lib/kv_storage';
 
 const DATA_FILE = path.join(process.cwd(), 'data', 'submissions.json');
 
@@ -13,13 +14,7 @@ export async function GET(request: Request) {
     }
 
     try {
-        if (!fs.existsSync(DATA_FILE)) {
-            return NextResponse.json([]);
-        }
-
-        const data = fs.readFileSync(DATA_FILE, 'utf8');
-        const submissions = JSON.parse(data);
-
+        const submissions = await getSubmissions();
         return NextResponse.json(submissions);
     } catch (error) {
         console.error('Admin fetch error:', error);
@@ -48,29 +43,10 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ success: false, error: 'Timestamp is required' }, { status: 400 });
         }
 
-        if (!fs.existsSync(DATA_FILE)) {
-            return NextResponse.json({ success: false, error: 'Data file not found on server' }, { status: 404 });
-        }
+        const success = await deleteSubmission(timestamp);
 
-        const data = fs.readFileSync(DATA_FILE, 'utf8');
-        let submissions = JSON.parse(data);
-
-        const initialLength = submissions.length;
-        submissions = submissions.filter((s: any) => s.timestamp !== timestamp);
-
-        if (submissions.length === initialLength) {
-            return NextResponse.json({ success: false, error: 'Record not found in the list' }, { status: 404 });
-        }
-
-        try {
-            fs.writeFileSync(DATA_FILE, JSON.stringify(submissions, null, 2));
-        } catch (e: any) {
-            console.error('File write error:', e);
-            // This is the common failure point on Vercel
-            return NextResponse.json({
-                success: false,
-                error: `Server file system is read-only (EROFS). Persisting changes is not possible in this environment without a database. Message: ${e.message}`
-            }, { status: 500 });
+        if (!success) {
+            return NextResponse.json({ success: false, error: 'Record not found' }, { status: 404 });
         }
 
         return NextResponse.json({ success: true });
