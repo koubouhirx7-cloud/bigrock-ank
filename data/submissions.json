@@ -1,0 +1,21 @@
+[
+  {
+    "storeName": "Test Store",
+    "contactName": "Test User",
+    "interestedProducts": [],
+    "timestamp": "2026-01-17T05:09:35.330Z"
+  },
+  {
+    "interestedProducts": [
+      "ハンドル（BLADE／GRAVEL）"
+    ],
+    "firstImpression": "とても良い",
+    "priceImpression": "適正",
+    "dealingIntent": "前向きに検討したい",
+    "storeName": "成功テスト店舗",
+    "contactName": "成功太郎",
+    "email": "",
+    "phone": "",
+    "timestamp": "2026-01-17T05:15:14.536Z"
+  }
+]
