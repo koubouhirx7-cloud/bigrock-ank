@@ -1,37 +1,102 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCustomerRecords } from '@/lib/storage';
 import { CustomerData } from '@/lib/types';
-import { Card } from '@/components/ui';
+import { Card, Button, Input, Label } from '@/components/ui';
 
 export default function AdminPage() {
     const [records, setRecords] = useState<(CustomerData & { timestamp?: string })[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const [password, setPassword] = useState('');
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [error, setError] = useState('');
+
+    const fetchRecords = async (pw: string) => {
+        setIsLoading(true);
+        setError('');
+        try {
+            const response = await fetch('/api/admin', {
+                headers: {
+                    'x-admin-password': pw
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setRecords(data);
+                setIsAuthenticated(true);
+                localStorage.setItem('admin_password', pw);
+            } else if (response.status === 401) {
+                setError('パスワードが正しくありません。');
+            } else {
+                setError('データの取得に失敗しました。');
+            }
+        } catch (error) {
+            console.error('Failed to fetch records:', error);
+            setError('エラーが発生しました。');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchRecords = async () => {
-            try {
-                const response = await fetch('/api/admin');
-                if (response.ok) {
-                    const data = await response.json();
-                    setRecords(data);
-                }
-            } catch (error) {
-                console.error('Failed to fetch records:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchRecords();
+        const savedPw = localStorage.getItem('admin_password');
+        if (savedPw) {
+            setPassword(savedPw);
+            fetchRecords(savedPw);
+        }
     }, []);
+
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        fetchRecords(password);
+    };
+
+    if (!isAuthenticated) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', padding: '1rem' }}>
+                <Card style={{ maxWidth: '400px', width: '100%', padding: '2rem' }}>
+                    <h1 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>管理者ログイン</h1>
+                    <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div>
+                            <Label htmlFor="admin-password">パスワード</Label>
+                            <Input
+                                id="admin-password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="入力を入力"
+                                required
+                            />
+                        </div>
+                        {error && <p style={{ color: '#ff4d4d', fontSize: '0.85rem' }}>{error}</p>}
+                        <Button type="submit" disabled={isLoading} style={{ marginTop: '0.5rem' }}>
+                            {isLoading ? '認証中...' : 'ログイン'}
+                        </Button>
+                    </form>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1>管理ダッシュボード</h1>
-                <span style={{ color: '#888' }}>合計: {records.length}件</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ color: '#888' }}>合計: {records.length}件</span>
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            localStorage.removeItem('admin_password');
+                            setIsAuthenticated(false);
+                            setRecords([]);
+                            setPassword('');
+                        }}
+                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                    >
+                        ログアウト
+                    </Button>
+                </div>
             </header>
 
             <div style={{ display: 'grid', gap: '1rem' }}>
