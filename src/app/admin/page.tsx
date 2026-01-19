@@ -46,6 +46,30 @@ export default function AdminPage() {
         }
     }, []);
 
+    const handleDelete = async (timestamp: string) => {
+        if (!window.confirm('このデータを削除してもよろしいですか？')) return;
+
+        try {
+            const response = await fetch('/api/admin', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-password': password
+                },
+                body: JSON.stringify({ timestamp })
+            });
+
+            if (response.ok) {
+                setRecords(prev => prev.filter(r => r.timestamp !== timestamp));
+            } else {
+                alert('削除に失敗しました。');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('エラーが発生しました。');
+        }
+    };
+
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
         fetchRecords(password);
@@ -113,7 +137,18 @@ export default function AdminPage() {
                                     <p style={{ color: '#888', fontSize: '0.9rem' }}>{rec.contactName}</p>
                                 </div>
                                 <div style={{ textAlign: 'right', fontSize: '0.85rem', color: '#666' }}>
-                                    {rec.timestamp ? new Date(rec.timestamp).toLocaleString() : '-'}
+                                    {rec.timestamp && (
+                                        <div style={{ marginBottom: '0.5rem' }}>
+                                            {new Date(rec.timestamp).toLocaleString()}
+                                        </div>
+                                    )}
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => rec.timestamp && handleDelete(rec.timestamp)}
+                                        style={{ color: '#ff4d4d', borderColor: '#ff4d4d', padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}
+                                    >
+                                        削除
+                                    </Button>
                                 </div>
                             </div>
 
