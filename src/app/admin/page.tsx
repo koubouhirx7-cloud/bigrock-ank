@@ -46,6 +46,41 @@ export default function AdminPage() {
         }
     }, []);
 
+    const handleExport = () => {
+        if (records.length === 0) return;
+
+        const headers = ['投稿日時', '店舗名', 'ご担当者名', '第一印象', '価格感', '取り扱い意向', '関心商品', 'コメント', 'メールアドレス', '電話番号'];
+        const rows = records.map(rec => [
+            rec.timestamp ? new Date(rec.timestamp).toLocaleString() : '',
+            rec.storeName || '',
+            rec.contactName || '',
+            rec.firstImpression || '',
+            rec.priceImpression || '',
+            rec.dealingIntent || '',
+            rec.interestedProducts?.join('; ') || '',
+            rec.comments?.replace(/\n/g, ' ') || '',
+            rec.email || '',
+            rec.phone || ''
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `bigrock_survey_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.appendChild(link);
+        document.body.removeChild(link);
+    };
+
     const handleDelete = async (timestamp: string) => {
         if (!window.confirm('このデータを削除してもよろしいですか？')) return;
 
@@ -108,6 +143,14 @@ export default function AdminPage() {
                 <h1>管理ダッシュボード</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <span style={{ color: '#888' }}>合計: {records.length}件</span>
+                    <Button
+                        variant="secondary"
+                        onClick={handleExport}
+                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                        disabled={records.length === 0}
+                    >
+                        Excelで出力
+                    </Button>
                     <Button
                         variant="outline"
                         onClick={() => {
